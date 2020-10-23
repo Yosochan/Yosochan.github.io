@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script>
+            
+            var fx = 300, max_fy = 400, max_jump = 25, block = 100, fspeed = 10, max_jump_count = 2;
+            var fym = 0, grvt = 8, jump = 0, dirt_x = 0;
+            var jump_count = max_jump_count;
+            
+
+            function init(){
+                cv = document.getElementById("cv");
+                gc = cv.getContext("2d");
+                gc.imageSmoothingEnabled= false;
+                onkeydown = key_process;
+                timer = setInterval(flygon_process, 20);
+                draw_process();
+            }
+
+            function draw_process(){
+                gc.fillStyle = "#ABEEFF";
+                gc.fillRect(0, 0, cv.width, max_fy+block);
+                gc.fillStyle = "#F9D980";
+                gc.fillRect(0, max_fy+block, cv.width, cv.height-max_fy-block);        
+                gc.drawImage(imgFlygon, fx, max_fy - fym, block, block);
+                for(i = -dirt_x; i<cv.width; i+= block){
+                    gc.drawImage(imgDirt, i, max_fy+block, block, block);
+                }
+                dirt_x += fspeed;
+                if(dirt_x > block)dirt_x = 0;
+            }
+
+            function flygon_process(){    
+                fym = fym + jump - grvt;
+                jump -= 1;
+                if(fym < 0){
+                    fym = 0;
+                    jump = 0;
+                    jump_count = max_jump_count;
+                }
+                
+                draw_process();
+            }
+
+            function key_process(event){
+
+                switch(event.keyCode){
+                    case 32:
+                        if(jump_count != 0){
+                            jump = max_jump;
+                            jump_count--;
+                        }
+                        break;
+                }
+            }
+        </script>
+    </head>
+    <body onload="init()"></body>
+        <canvas id="cv" width="1200" height="700">
+        <img id="imgFlygon" src="flygon.png" style="display: none"/>
+        <img id="imgDirt" src="dirt.png" style="display: none"/>
+    </body>
+</html>
