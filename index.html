@@ -3,32 +3,149 @@
     <head>
         <meta charset="UTF-8">
         <script>
+
+            var cv, gc;
             
-            var fx = 300, max_fy = 400, max_jump = 25, block = 100, fspeed = 10, max_jump_count = 2;
-            var fym = 0, grvt = 8, jump = 0, dirt_x = 0;
-            var jump_count = max_jump_count;
-            
+            let fx = 300, max_fy = 400, max_jump = 25, block = 64, max_jump_count = 2, max_fspeed = 20, min_fspeed = 10, afspeed = 0.01, max_mtspeed = 1, max_truck_x = 30;
+            let grvt = 8, min_obj_freq = 10, max_obj_freq = 100, obj_spawn = 0;
+            var fym,  jump, dirt_x, mt_x, fspeed, mtspeed, truck_x, truckspeed;
+            var jump_count;
+            var game_over;
+
+            var objects_num_max = 10, object_num;
+            var objects = new Array(objects_num_max);
 
             function init(){
                 cv = document.getElementById("cv");
                 gc = cv.getContext("2d");
                 gc.imageSmoothingEnabled= false;
                 onkeydown = key_process;
+                onmousedown = mouse_process;
                 timer = setInterval(flygon_process, 20);
+
+                reset();
+
                 draw_process();
             }
 
+            function reset(){
+                fym = 0;
+                jump = 0;
+                dirt_x = 0;
+                mt_x = 0;
+                truck_x = max_truck_x;
+                truckspeed = 0;
+                fspeed = min_fspeed;
+                mtspeed = max_mtspeed;
+                jump_count = max_jump_count;
+                object_num = 0;
+                game_over = false;
+
+                
+
+                for(i = 0; i< objects_num_max; i++){
+                    objects[i] = {
+                        enable:false,
+                        img:0,
+                        x:0,
+                        y:0,
+                        width:0,
+                        height:0,
+                    };
+                }
+            }
+
             function draw_process(){
+
+                fspeed += afspeed;
+                if(fspeed > max_fspeed) fspeed = max_fspeed;
+
+                dirt_x += fspeed;
+                if(dirt_x > block)dirt_x = 0;
+
+                mt_x += mtspeed;
+                if(mt_x > imgMt.width) mt_x -= imgMt.width;
+
+                if(game_over == true){
+                    fspeed  *= 0.9;
+                    mtspeed *= 0.9;
+                    jump_count = 0;
+                    truckspeed = min_fspeed - fspeed;
+                    truck_x += truckspeed;
+                }
+
                 gc.fillStyle = "#ABEEFF";
                 gc.fillRect(0, 0, cv.width, max_fy+block);
                 gc.fillStyle = "#F9D980";
-                gc.fillRect(0, max_fy+block, cv.width, cv.height-max_fy-block);        
-                gc.drawImage(imgFlygon, fx, max_fy - fym, block, block);
-                for(i = -dirt_x; i<cv.width; i+= block){
-                    gc.drawImage(imgDirt, i, max_fy+block, block, block);
+                gc.fillRect(0, max_fy+block, cv.width, cv.height-max_fy-block);   
+                for(i = 0; i<2; i++){
+                    gc.drawImage(imgMt, -mt_x + i*imgMt.width, max_fy - imgMt.height, imgMt.width, imgMt.height);
                 }
-                dirt_x += fspeed;
-                if(dirt_x > block)dirt_x = 0;
+
+                gc.drawImage(imgSun, cv.width*0.8, cv.height*0.1, cv.width*0.1, cv.width*0.1);
+
+                
+                for(i = 0; i<cv.width+block; i+= block){
+                    gc.drawImage(imgDirt, i-dirt_x, max_fy, block, block);
+                }
+                var fy = max_fy - fym - imgFlygon.height;
+                gc.drawImage(imgFlygon, fx, fy, imgFlygon.width, imgFlygon.height);
+
+                gc.drawImage(imgTruck, truck_x, max_fy - imgTruck.height, imgTruck.width, imgTruck.height);
+
+                for(i = 0; i< objects_num_max; i++){
+                    if (objects[i].enable == false) continue;
+                    objects[i].x -= fspeed;
+                    if(objects[i].x + objects[i].width < 0) objects[i].enable = false;
+                    gc.drawImage(objects[i].img, objects[i].x, objects[i].y, objects[i].width, objects[i].height);
+
+                    if(Math.abs(objects[i].x - fx) < (objects[i].width + imgFlygon.width )/3 &&
+                       Math.abs(objects[i].y - fy) < (objects[i].height+ imgFlygon.height)/3){
+                        game_over = true;
+                    }
+                }
+
+
+
+            }
+
+            function object_process(){
+
+                obj_spawn++;
+
+                if(objects[object_num].enable == true) return;
+                if(obj_spawn < min_obj_freq) return;
+                var rd_range = 200; 
+                if(obj_spawn > max_obj_freq) rd_range = 0;
+
+                switch(Math.floor( Math.random()*rd_range)){
+                    case 0:
+                        objects[object_num].img = imgTree;
+                        break;
+                    case 1:
+                        objects[object_num].img = imgLtree;
+                        break;
+                    case 2:
+                        objects[object_num].img = imgHouse;
+                        break;
+                    case 3:
+                        objects[object_num].img = imgObj;
+                        break;
+                    default:
+                        return;
+                }
+                
+                objects[object_num].enable = true;
+                objects[object_num].x = cv.width;
+                objects[object_num].y = max_fy - objects[object_num].img.height;
+                objects[object_num].width = objects[object_num].img.width;
+                objects[object_num].height = objects[object_num].img.height;
+
+                object_num++;
+                if(object_num >= objects_num_max) object_num = 0;
+
+                obj_spawn = 0;
+                
             }
 
             function flygon_process(){    
@@ -39,26 +156,47 @@
                     jump = 0;
                     jump_count = max_jump_count;
                 }
+
+
                 
+                object_process();
                 draw_process();
             }
 
-            function key_process(event){
+            function jump_process(){
+                if(jump_count != 0){
+                    jump = max_jump;
+                    jump_count--;
+                }
+            }
 
+            function key_process(event){
                 switch(event.keyCode){
                     case 32:
-                        if(jump_count != 0){
-                            jump = max_jump;
-                            jump_count--;
-                        }
+                        jump_process();
+                        break;
+                    case 38:
+                        reset();
                         break;
                 }
+            }
+
+            function mouse_process(event){
+                jump_process();
             }
         </script>
     </head>
     <body onload="init()"></body>
-        <canvas id="cv" width="1200" height="700">
-        <img id="imgFlygon" src="flygon.png" style="display: none"/>
-        <img id="imgDirt" src="dirt.png" style="display: none"/>
+        <canvas id="cv" width="800" height="600">
+        <img id="imgFlygon" src="flygon.png"   style="display: none"/>
+        <img id="imgDirt"   src="dirt.png"     style="display: none"/>
+        <img id="imgMt"     src="mountain.png" style="display: none"/>
+        <img id="imgSun"    src="sun.png"      style="display: none"/>
+        <img id="imgHouse"  src="house.png"    style="display: none"/>
+        <img id="imgLtree"  src="low_tree.png" style="display: none"/>
+        <img id="imgTree"   src="tree.png"     style="display: none"/>
+        <img id="imgObj"    src="object.png"   style="display: none"/>
+        <img id="imgTruck"  src="truck.png"    style="display: none"/>
+
     </body>
 </html>
